@@ -14,6 +14,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 
 public class Main {
+    //todo: odgovori na pitanja
     private static final Path OUTPUT_FILE = Paths.get("./sensorscope-monitor-network");
 
     static {
