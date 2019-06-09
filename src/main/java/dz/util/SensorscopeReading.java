@@ -1,4 +1,4 @@
-package dz.zad1;
+package dz.util;
 
 import lombok.Builder;
 import lombok.Value;

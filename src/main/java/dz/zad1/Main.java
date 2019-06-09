@@ -1,8 +1,11 @@
 package dz.zad1;
 
-import java.io.FileWriter;
+import dz.util.SensorscopeReading;
+
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,7 +21,10 @@ public class Main {
     public static void main(String[] args) throws IOException {
         Stream<SensorscopeReading> readingStream = readLinesFromDirectory(INPUT_DIR);
 
-        try (PrintWriter w = new PrintWriter(new FileWriter(OUT_FILE.toFile(), false))) {
+        try (PrintWriter w = new PrintWriter(
+                new OutputStreamWriter(
+                        Files.newOutputStream(OUT_FILE), StandardCharsets.UTF_8), true)) {
+
             readingStream.sorted().map(SensorscopeReading::toCSV).forEach(w::println);
         } catch (IOException e) {
             System.out.println("Unable to write results, printing them on standard output instead");

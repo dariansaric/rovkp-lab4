@@ -11,7 +11,7 @@ public enum Gender {
     }
 
 
-    public String getSymbol() {
+    public String symbol() {
         return symbol;
     }
 

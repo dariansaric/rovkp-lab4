@@ -1,6 +1,9 @@
 package dz.zad1;
 
+import dz.util.SensorscopeReading;
+
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -39,7 +42,7 @@ public class Util {
 
         files.forEach(f -> {
             try {
-                stream = Stream.concat(stream, Files.lines(f));
+                stream = Stream.concat(stream, Files.lines(f, StandardCharsets.UTF_8));
             } catch (IOException e) {
                 e.printStackTrace();
             }
