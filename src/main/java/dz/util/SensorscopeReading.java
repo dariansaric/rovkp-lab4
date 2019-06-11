@@ -75,7 +75,7 @@ public class SensorscopeReading implements Comparable<SensorscopeReading> {
 
 
     public String toCSV() {
-        return new StringJoiner("'")
+        return new StringJoiner(",")
                 .add(Objects.toString(stationID))
                 .add(Objects.toString(year))
                 .add(Objects.toString(month))

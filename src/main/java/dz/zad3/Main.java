@@ -22,11 +22,6 @@ public class Main {
     }
 
     public static void main(String[] args) {
-//        Path outputFile = OUTPUT_FILE;
-//        if (args.length == 1) {
-//            outputFile = Paths.get(args[0]);
-//        }
-
         SparkConf conf = new SparkConf().setAppName("SparkStreamingMaxSolarPanelCurrent");
 
         // Set the master if not already set through the command line
@@ -44,9 +39,8 @@ public class Main {
                 .map(SensorscopeReading::parseUnchecked)
                 .filter(Objects::nonNull);
 
-        // Do the job
+        // Do the jobresult.dstream().save
         JavaPairDStream<Long, Double> result = records
-//                .window(Duration.apply(60 * 1000), Duration.apply(10 * 1000))
                 .mapToPair(reading -> new Tuple2<>(reading.getStationID(), reading.getSolarPanelCurrent()))
                 .reduceByKeyAndWindow(Double::max, Durations.seconds(60), Durations.seconds(10));
 

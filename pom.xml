@@ -7,6 +7,7 @@
     <groupId>darian.saric</groupId>
     <artifactId>rovkp.lab4</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
     <!-- configuration of basic properties -->
     <properties>

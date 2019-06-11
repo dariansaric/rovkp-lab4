@@ -30,4 +30,13 @@ public class Iterables {
         return i;
     }
 
+    public static <T> int count(Iterable<T> elements) {
+        int c = 0;
+        for (T v : elements) {
+            c++;
+        }
+
+        return c;
+    }
+
 }

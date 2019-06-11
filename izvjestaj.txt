@@ -1,0 +1,522 @@
+4. domaca zadaca ROVKP
+Darian Saric, 0036493345
+
+1. zadatak: Rad s kolekcijskim tokovima
+Main.java
+
+public class Main {
+    private static final Path INPUT_DIR = Paths.get("./sensorscope-monitor/");
+    private static final Path OUT_FILE = Paths.get("./sensorscope-monitor-all.csv");
+
+    public static void main(String[] args) throws IOException {
+        Stream<SensorscopeReading> readingStream = readLinesFromDirectory(INPUT_DIR);
+
+        try (PrintWriter w = new PrintWriter(
+                new OutputStreamWriter(
+                        Files.newOutputStream(OUT_FILE), StandardCharsets.UTF_8), true)) {
+
+            readingStream.sorted().map(SensorscopeReading::toCSV).forEach(w::println);
+        } catch (IOException e) {
+            System.out.println("Unable to write results, printing them on standard output instead");
+            readingStream.sorted().map(SensorscopeReading::toCSV).forEach(System.out::println);
+        }
+
+        System.out.println("Number of valis files: " + getFilesStream(INPUT_DIR).count());
+        System.out.println("Number of lines in output: " + Files.lines(OUT_FILE).count());
+        System.out.println("Output file size in bytes: " + Files.size(OUT_FILE));
+    }
+}
+
+SensorScoperReading.java
+
+@Value
+@Builder
+public class SensorscopeReading implements Comparable<SensorscopeReading> {
+
+    public static final Comparator<SensorscopeReading> EPOCH_COMPARATOR = Comparator.comparingLong(SensorscopeReading::getTimeSinceEpoch);
+    private static final String PARSE_DELIMITER_REGEX = "\\s";
+
+    private final long stationID;
+    private final int year;
+    private final int month;
+    private final int day;
+    private final int hour;
+    private final int minute;
+    private final int second;
+    private final long timeSinceEpoch;
+    private final long sequenceNumber;
+    private final double configSamplingTime;
+    private final double dataSamplingTime;
+    private final double radioDutyCycle;
+    private final double radioTransmissionPower;
+    private final double radioTransmissionFrequency;
+    private final double primaryBufferVoltage;
+    private final double secondaryBufferVoltage;
+    private final double solarPanelCurrent;
+    private final double globalCurrent;
+    private final double energySource;
+
+
+    public static SensorscopeReading parse(String s) {
+        try {
+            String[] args = s.split(PARSE_DELIMITER_REGEX);
+            return builder()
+                    .stationID(Long.parseLong(args[0]))
+                    .year(Integer.parseInt(args[1]))
+                    .month(Integer.parseInt(args[2]))
+                    .day(Integer.parseInt(args[3]))
+                    .hour(Integer.parseInt(args[4]))
+                    .minute(Integer.parseInt(args[5]))
+                    .second(Integer.parseInt(args[6]))
+                    .timeSinceEpoch(Long.parseLong(args[7]))
+                    .sequenceNumber(Long.parseLong(args[8]))
+                    .configSamplingTime(Double.parseDouble(args[9]))
+                    .dataSamplingTime(Double.parseDouble(args[10]))
+                    .radioDutyCycle(Double.parseDouble(args[11]))
+                    .radioTransmissionPower(Double.parseDouble(args[12]))
+                    .radioTransmissionFrequency(Double.parseDouble(args[13]))
+                    .primaryBufferVoltage(Double.parseDouble(args[14]))
+                    .secondaryBufferVoltage(Double.parseDouble(args[15]))
+                    .solarPanelCurrent(Double.parseDouble(args[16]))
+                    .globalCurrent(Double.parseDouble(args[17]))
+                    .energySource(Double.parseDouble(args[18]))
+                    .build();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid argument: " + s);
+        }
+    }
+
+
+    public static SensorscopeReading parseUnchecked(String s) {
+        try {
+            return parse(s);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+
+    public String toCSV() {
+        return new StringJoiner("'")
+                .add(Objects.toString(stationID))
+                .add(Objects.toString(year))
+                .add(Objects.toString(month))
+                .add(Objects.toString(day))
+                .add(Objects.toString(hour))
+                .add(Objects.toString(minute))
+                .add(Objects.toString(second))
+                .add(Objects.toString(timeSinceEpoch))
+                .add(Objects.toString(sequenceNumber))
+                .add(Objects.toString(configSamplingTime))
+                .add(Objects.toString(dataSamplingTime))
+                .add(Objects.toString(radioDutyCycle))
+                .add(Objects.toString(radioTransmissionPower))
+                .add(Objects.toString(radioTransmissionFrequency))
+                .add(Objects.toString(primaryBufferVoltage))
+                .add(Objects.toString(secondaryBufferVoltage))
+                .add(Objects.toString(solarPanelCurrent))
+                .add(Objects.toString(globalCurrent))
+                .add(Objects.toString(energySource)).toString();
+    }
+
+    @Override
+    public int compareTo(SensorscopeReading other) {
+        return EPOCH_COMPARATOR.compare(this, other);
+    }
+}
+
+Util.java
+
+public class Util {
+    private static final Pattern FILENAME_REGEX = Pattern.compile("sensorscope-monitor-(\\d+)\\.txt");
+
+    private static Stream<String> stream = Stream.empty();
+    private static long numberOfFiles;
+    private static long numberOfLines;
+
+    private Util() {
+    }
+
+    public static Stream<SensorscopeReading> readLinesFromDirectory(Path dir) throws IOException {
+        if (!Files.isDirectory(dir)) {
+            throw new IllegalArgumentException("Directory path expected, got: " + dir);
+        }
+
+        stream = Stream.empty();
+        getAllLines(getFilesStream(dir));
+        return stream.map(SensorscopeReading::parseUnchecked).filter(Objects::nonNull);
+    }
+
+    public static Stream<Path> getFilesStream(Path dir) throws IOException {
+//        System.out.println("Number of files: " + files.count());
+        return Files
+                .list(dir)
+                .filter(f ->
+                        FILENAME_REGEX.matcher(f.getFileName().toString()).matches());
+    }
+
+    private static void getAllLines(Stream<Path> files) {
+
+        files.forEach(f -> {
+            try {
+                stream = Stream.concat(stream, Files.lines(f, StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    public static long getNumberOfFiles() {
+        return numberOfFiles;
+    }
+
+    public static long getNumberOfLines() {
+        return numberOfLines;
+    }
+}
+
+Pitanja:
+- Koliko je bilo ulaznih datoteka sensorscopemonitor-xxx.txt? 97
+- Koliko se zapisa nalazi u izlaznoj datoteci? 4726643
+- Kolika je veličina izlazne datoteke? 411409040 B
+
+2. zadatak - Obrada podataka programskim okvirom Apache Spark
+
+Enum.java
+
+public enum Gender {
+    MALE("M"),
+    FEMALE("F");
+
+    private String symbol;
+
+    Gender(String symbol) {
+        this.symbol = symbol;
+    }
+
+
+    public String symbol() {
+        return symbol;
+    }
+
+}
+
+Iterables.java
+
+public class Iterables {
+    private Iterables() {}
+
+    public static int sum(Iterable<Integer> integers) {
+        int sum = 0;
+        for (int i : integers) {
+            sum += i;
+        }
+        return sum;
+    }
+
+    public static <T> int sum(Iterable<T> elements, Function<? super T, Integer> keyExtractor) {
+        int sum = 0;
+        for (T value : elements) {
+            sum += keyExtractor.apply(value);
+        }
+        return sum;
+    }
+
+    public static <T> int size(Iterable<T> iterable) {
+        int i = 0;
+        for (Iterator<T> iter = iterable.iterator(); iter.hasNext(); iter.next()) {
+            i++;
+        }
+        return i;
+    }
+
+}
+
+SerializedComparator.java
+
+public interface SerializedComparator<T> extends Comparator<T>, Serializable {
+
+    static <T> SerializedComparator<T> serialize(SerializedComparator<T> comparator) {
+        return comparator;
+    }
+
+}
+
+USBabyNameRecord.java
+
+Value
+@Builder
+public class USBabyNameRecord implements Serializable {
+    public static final Comparator<USBabyNameRecord> COUNT_COMPARATOR =
+            Comparator.comparingInt(USBabyNameRecord::getCount);
+
+    private final int id;
+    private final String name;
+    private final int year;
+    private final Gender gender;
+    private final String state;
+    private final int count;
+
+    public static USBabyNameRecord parse(String s) {
+        try {
+            String[] args = s.split(",");
+            if (!(args[3].equals(MALE.symbol()) || args[3].equals(FEMALE.symbol()))) {
+                throw new IllegalArgumentException("Gender must be either M or F.");
+            }
+
+            return builder()
+                    .id(Integer.parseInt(args[0]))
+                    .name(args[1])
+                    .year(Integer.parseInt(args[2]))
+                    .gender(args[3].equals("M") ? MALE : Gender.FEMALE)
+                    .state(args[4])
+                    .count(Integer.parseInt(args[5]))
+                    .build();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid argument: " + s, e);
+        }
+    }
+
+    public static USBabyNameRecord parseUnchecked(String s) {
+        try {
+            return parse(s);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    public boolean isMale() {
+        return gender.equals(MALE);
+    }
+
+    public boolean isFemale() {
+        return !isMale();
+    }
+
+}
+
+Main.java
+
+public class Main {
+    private static final Path INPUT_FILE = Paths.get("./StateNames.csv");
+    private static final Path OUTPUT_FILE = INPUT_FILE.resolveSibling("StateNames-results.txt");
+
+    /** Apache Spark Java RDD only accepts a serialized comparator. */
+    private static final SerializedComparator<Tuple2<String, Integer>> TUPLE_COMPARING_INT = serialize((p1, p2) -> Integer.compare(p1._2, p2._2));
+
+    public static void main(String[] args) {
+        SparkConf conf = new SparkConf().setAppName("ChildrenCount");
+
+        // Set the master if not already set through the command line
+        try {
+            conf.get("spark.master");
+        } catch (NoSuchElementException ex) {
+            conf.setMaster("local");
+        }
+
+        JavaSparkContext sc = new JavaSparkContext(conf);
+
+        // Create an RDD from text file lines and filter only valid records
+        JavaRDD<USBabyNameRecord> records = sc.textFile(INPUT_FILE.toString())
+                .map(USBabyNameRecord::parseUnchecked)
+                .filter(Objects::nonNull);
+
+        // Build the string and write it out
+        String result = filterRelevantResults(records);
+        System.out.println(result);
+        writeToFile(result);
+    }
+
+    private static String filterRelevantResults(JavaRDD<USBabyNameRecord> records) {
+        StringJoiner sb = new StringJoiner("\n");
+
+        sb.add("1) Most unpopular male name: ");
+        String mostUnpopularMaleName = records
+                .filter(USBabyNameRecord::isMale)
+                .groupBy(USBabyNameRecord::getName)
+                .aggregateByKey(0, (acc, values) -> Iterables.sum(values, USBabyNameRecord::getCount) + acc, Integer::sum)
+                .min(TUPLE_COMPARING_INT)
+                ._1();
+        sb.add(mostUnpopularMaleName);
+
+        sb.add("2) 10 most popular female names: ");
+        String most10PopularFemaleNames = records
+                .filter(USBabyNameRecord::isFemale)
+                .groupBy(USBabyNameRecord::getName)
+                .aggregateByKey(0, (acc, values) -> Iterables.sum(values, USBabyNameRecord::getCount) + acc, Integer::sum)
+                .top(10, TUPLE_COMPARING_INT)
+                .stream()
+                .map(Tuple2::_1)
+                .collect(Collectors.joining(", "));
+        sb.add(most10PopularFemaleNames);
+
+        sb.add("3) State where most children were born in 1948: ");
+        String stateWithMostChildrenBorn = records
+                .groupBy(USBabyNameRecord::getState)
+                .aggregateByKey(0, (acc, values) -> Iterables.sum(values, USBabyNameRecord::getCount) + acc, Integer::sum)
+                .max(TUPLE_COMPARING_INT)
+                ._1();
+        sb.add(stateWithMostChildrenBorn);
+
+        sb.add("4) Number of newborns throughout the years: ");
+        JavaPairRDD<Integer, Integer> newbornsByYearRDD = records
+                .groupBy(USBabyNameRecord::getYear)
+                .aggregateByKey(0, (acc, values) -> Iterables.sum(values, USBabyNameRecord::getCount) + acc, Integer::sum)
+                .sortByKey();
+        String numberOfNewbornsPerYear = newbornsByYearRDD
+                .map(pair -> String.format("\n%d: %d", pair._1, pair._2))
+                .reduce(String::concat);
+        sb.add(numberOfNewbornsPerYear);
+
+        // Save these few records locally as map entries for fast search
+        Map<Integer, Integer> newbornsByYearMap = newbornsByYearRDD.collectAsMap();
+
+        sb.add("5) Percentage of name 'Luke' throughout the years: ");
+        String percentageOfNamePerYear = records
+                .filter(record -> "Luke".equals(record.getName()))
+                .groupBy(USBabyNameRecord::getYear)
+                .aggregateByKey(0, (acc, values) -> Iterables.sum(values, USBabyNameRecord::getCount) + acc, Integer::sum)
+                .sortByKey()
+                .map(pair -> {
+                    double percent = 100.0 * pair._2 / newbornsByYearMap.get(pair._1);
+                    return String.format(Locale.US, "\n%d: %.2f", pair._1, percent);
+                })
+                .reduce(String::concat);
+        sb.add(percentageOfNamePerYear);
+
+        sb.add("6) Total number of children born: ");
+        long numChildrenBorn = newbornsByYearRDD
+                .map(Tuple2::_2)
+                .reduce(Integer::sum);
+        sb.add(Objects.toString(numChildrenBorn));
+
+        sb.add("7) Number of unique names: ");
+        long numUniqueNames = records
+                .groupBy(USBabyNameRecord::getName)
+                .keys()
+                .count();
+        sb.add(Objects.toString(numUniqueNames));
+
+        sb.add("8) Number of unique states: ");
+        long numUniqueStates = records
+                .groupBy(USBabyNameRecord::getState)
+                .keys()
+                .count();
+        return sb.add(Objects.toString(numUniqueStates)).toString();
+    }
+
+    private static void writeToFile(String text) {
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(OUTPUT_FILE, StandardCharsets.UTF_8))) {
+            writer.println(text);
+        } catch (IOException e) {
+            System.err.println("Error writing to file " + OUTPUT_FILE);
+            e.printStackTrace();
+        }
+    }
+
+}
+
+Odgovori na pitanja
+- Koje je najnepopularnije muškoime kroz čitav period i države?
+- Kojih 10 ženskihimena su najpopularnija kroz čitav period i države?
+- U kojoj državi je 1948.godine rođeno najviše djeceoba spola?
+- Kakvo je kretanje brojanovorođene muškedjecekroz godine?
+- Kakvo je kretanje postotkaimena Lukekroz godine?
+- Koji je ukupni broj rođene djece u cjelokupnom periodu u svim državama?
+- Koliki je broj različitih imena koja se pojavljuju u zapisima?
+
+3. zadatak - Obrada toka podataka programskim okvirom Apache Spark
+
+SensorStreamGenerator.java
+
+package dz.zad3;
+
+
+/**
+ * @author Krešimir Pripužić <kresimir.pripuzic@fer.hr>
+ */
+public class SensorStreamGenerator {
+
+    public static final int WAIT_PERIOD_IN_MILLISECONDS = 1;
+    public static final int PORT = 10002;
+
+    public static void main(String[] args) throws Exception {
+
+        if (args.length != 1) {
+            System.err.println("Usage: SensorStreamGenerator <input file>");
+            System.exit(-1);
+        }
+
+        System.out.println("Waiting for client connection");
+
+        try (ServerSocket serverSocket = new ServerSocket(PORT);
+             Socket clientSocket = serverSocket.accept()) {
+
+            System.out.println("Connection successful");
+            PrintWriter out =
+                    new PrintWriter(
+                            new OutputStreamWriter(clientSocket.getOutputStream(), StandardCharsets.UTF_8), true);
+
+            Stream<String> lines = Files.lines(Paths.get(args[0]));
+
+            lines.forEach(line -> {
+                out.println(line);
+                try {
+                    Thread.sleep(WAIT_PERIOD_IN_MILLISECONDS);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            });
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+}
+
+Main.java
+
+public class Main {
+    private static final Path OUTPUT_FILE = Paths.get("./sensorscope-monitor-network");
+
+    static {
+//        System.setProperty("hadoop.home.dir", "C:\\usr\\hadoop-2.8.1");
+    }
+
+    public static void main(String[] args) {
+        SparkConf conf = new SparkConf().setAppName("SparkStreamingMaxSolarPanelCurrent");
+
+        // Set the master if not already set through the command line
+        try {
+            conf.get("spark.master");
+        } catch (NoSuchElementException ex) {
+            // Spark streaming application requires at least 2 threads
+            conf.setMaster("local[2]");
+        }
+
+        JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(5));
+
+        // Create a stream from text records and filter only valid records
+        JavaDStream<SensorscopeReading> records = jssc.socketTextStream("localhost", SensorStreamGenerator.PORT)
+                .map(SensorscopeReading::parseUnchecked)
+                .filter(Objects::nonNull);
+
+        // Do the jobresult.dstream().save
+        JavaPairDStream<Long, Double> result = records
+                .mapToPair(reading -> new Tuple2<>(reading.getStationID(), reading.getSolarPanelCurrent()))
+                .reduceByKeyAndWindow(Double::max, Durations.seconds(60), Durations.seconds(10));
+
+        // Save aggregated tuples to text file
+        result.dstream().saveAsTextFiles(OUTPUT_FILE.toString(), "txt");
+
+        // Start the streaming context and wait for it to "finish"
+        jssc.start();
+
+        try {
+            jssc.awaitTermination();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+}

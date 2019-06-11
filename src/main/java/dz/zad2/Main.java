@@ -20,8 +20,8 @@ import static dz.zad2.SerializedComparator.serialize;
 
 
 public class Main {
-    private static final Path INPUT_FILE = Paths.get("./StateNames.csv");
-    private static final Path OUTPUT_FILE = INPUT_FILE.resolveSibling("StateNames-results.txt");
+    private static final String INPUT_FILE = "file:/home/darian/Desktop/[ROVKP]/lab4/state/*.csv";
+    private static final Path OUTPUT_FILE = Paths.get("StateNames-results.txt");
 
     /** Apache Spark Java RDD only accepts a serialized comparator. */
     private static final SerializedComparator<Tuple2<String, Integer>> TUPLE_COMPARING_INT = serialize((p1, p2) -> Integer.compare(p1._2, p2._2));
@@ -33,13 +33,13 @@ public class Main {
         try {
             conf.get("spark.master");
         } catch (NoSuchElementException ex) {
-            conf.setMaster("local");
+            conf.setMaster("local[2]");
         }
 
         JavaSparkContext sc = new JavaSparkContext(conf);
 
-        // Create an RDD from text file lines and filter only valid records
-        JavaRDD<USBabyNameRecord> records = sc.textFile(INPUT_FILE.toString())
+        JavaRDD<USBabyNameRecord> records = sc.textFile(INPUT_FILE)
+//                .filter(l -> !l.equals("Id,Name,Year,Gender,State,Count"))
                 .map(USBabyNameRecord::parseUnchecked)
                 .filter(Objects::nonNull);
 
