@@ -57,7 +57,7 @@ public class Main {
         );
 
         s.add("Broj ženskih osoba podvrgnuto obdukciji: " + records
-                .filter(USDeathRecord::isMale)
+                .filter(USDeathRecord::isFemale)
                 .filter(USDeathRecord::wasAutopsied)
                 .count()
         );
@@ -70,11 +70,12 @@ public class Main {
                 .top(7, TUPLE_2_SERIALIZED_COMPARATOR)
         );
 
-        double numDeadWomenBetween50And65 = records.filter(USDeathRecord::isFemale)
+        double numDeadWomenBetween50And65 = records.filter(USDeathRecord::isFemale).filter(r -> r.getMaritalStatus().equals("M"))
                 .filter(r -> r.getAge() < 65 && r.getAge() > 50).count();
 
         s.add("Kretanje postotka umrlih žena u dobi između 50 i 65 godina po danima u tjednu: " + records
                 .filter(USDeathRecord::isFemale)
+                .filter(r -> r.getMaritalStatus().equals("M"))
                 .filter(r -> r.getAge() < 65 && r.getAge() > 50)
                 .groupBy(USDeathRecord::getDayOfWeekOfDeath)
                 .mapToPair((PairFunction<Tuple2<Integer, Iterable<USDeathRecord>>, Integer, Double>) integerIterableTuple2 -> new Tuple2<>(integerIterableTuple2._1, Iterables.count(integerIterableTuple2._2) / numDeadWomenBetween50And65))
@@ -90,7 +91,8 @@ public class Main {
         s.add("Broj različitih godina starosti umrlih osoba: " + records
                 .map(USDeathRecord::getAge)
                 .distinct()
-                .count()
+                        .collect()
+//                .count()
         );
 
         return s.toString();
